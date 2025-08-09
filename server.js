@@ -18,7 +18,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-const PORT = process.env.PORT || 10000; // Render uses port 10000 by default
+const PORT = process.env.PORT || 3000; // Vercel uses any port
 
 // Middleware
 app.use(cors({
@@ -87,14 +87,16 @@ const startServer = async () => {
     // Initialize database tables
     await initializeDatabase();
     
-    // Start the server
-    app.listen(PORT, () => {
-      console.log(`🚀 Server is running on port ${PORT}`);
-      console.log(`📱 API Base URL: http://localhost:${PORT}`);
-      console.log(`🔗 Health Check: http://localhost:${PORT}/api/health`);
-      console.log(`📚 Blogs API: http://localhost:${PORT}/api/blogs`);
-      console.log('✅ Ready to accept requests!');
-    });
+    // Start the server (only if not in Vercel environment)
+    if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
+      app.listen(PORT, () => {
+        console.log(`🚀 Server is running on port ${PORT}`);
+        console.log(`📱 API Base URL: http://localhost:${PORT}`);
+        console.log(`🔗 Health Check: http://localhost:${PORT}/api/health`);
+        console.log(`📚 Blogs API: http://localhost:${PORT}/api/blogs`);
+        console.log('✅ Ready to accept requests!');
+      });
+    }
   } catch (error) {
     console.error('❌ Failed to start server:', error.message);
     process.exit(1);
@@ -114,3 +116,6 @@ process.on('SIGINT', () => {
 
 // Start the application
 startServer();
+
+// Export for Vercel
+export default app;
