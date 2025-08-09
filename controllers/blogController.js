@@ -115,8 +115,8 @@ export const createBlog = async (req, res) => {
       });
     }
     
-    // Get image path if uploaded
-    const coverImage = req.file ? `uploads/${req.file.filename}` : null;
+    // Get image path if uploaded - return relative path for frontend
+    const coverImage = req.file ? `/${process.env.UPLOAD_PATH || 'uploads'}/${req.file.filename}` : null;
     
     // Insert into database
     const [result] = await pool.query(
@@ -178,12 +178,12 @@ export const updateBlog = async (req, res) => {
     if (req.file) {
       // Delete old image if it exists
       if (coverImage) {
-        const oldImagePath = path.join(__dirname, '..', coverImage);
+        const oldImagePath = path.join(__dirname, '..', coverImage.replace(/^\//, '')); // Remove leading slash
         if (fs.existsSync(oldImagePath)) {
           fs.unlinkSync(oldImagePath);
         }
       }
-      coverImage = `uploads/${req.file.filename}`;
+      coverImage = `/${process.env.UPLOAD_PATH || 'uploads'}/${req.file.filename}`;
     }
     
     // Update blog
@@ -257,7 +257,7 @@ export const deleteBlog = async (req, res) => {
     // Delete associated image file
     const coverImage = existingBlog[0].cover_image;
     if (coverImage) {
-      const imagePath = path.join(__dirname, '..', coverImage);
+      const imagePath = path.join(__dirname, '..', coverImage.replace(/^\//, '')); // Remove leading slash
       if (fs.existsSync(imagePath)) {
         fs.unlinkSync(imagePath);
       }

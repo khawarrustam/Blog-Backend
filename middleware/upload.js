@@ -2,12 +2,15 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Create uploads directory if it doesn't exist
-const uploadsDir = path.join(__dirname, '..', 'uploads');
+// Create uploads directory using UPLOAD_PATH from .env
+const uploadsDir = path.join(__dirname, '..', process.env.UPLOAD_PATH || 'uploads');
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
@@ -18,9 +21,11 @@ const storage = multer.diskStorage({
     cb(null, uploadsDir);
   },
   filename: function (req, file, cb) {
-    // Generate unique filename with timestamp
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
+    // Generate unique filename with timestamp + original name
+    const timestamp = Date.now();
+    const originalName = file.originalname.replace(/\s+/g, '_'); // Replace spaces with underscores
+    const filename = `${timestamp}_${originalName}`;
+    cb(null, filename);
   }
 });
 
@@ -53,7 +58,7 @@ export const handleUploadError = (error, req, res, next) => {
     if (error.code === 'LIMIT_FILE_SIZE') {
       return res.status(400).json({
         success: false,
-        message: 'File too large. Maximum size is 5MB.'
+        message: `File too large. Maximum size is ${Math.round((process.env.MAX_FILE_SIZE || 5242880) / 1048576)}MB.`
       });
     }
     return res.status(400).json({

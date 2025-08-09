@@ -3,6 +3,7 @@ import cors from 'cors';
 import bodyParser from 'body-parser';
 import dotenv from 'dotenv';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 
 // Import database configuration
@@ -22,7 +23,14 @@ const PORT = process.env.PORT || 3000; // Vercel uses any port
 
 // Middleware
 app.use(cors({
-  origin: ['http://localhost:3000', 'http://localhost:5173'], // React dev servers
+  origin: [
+    'http://localhost:3000', 
+    'http://localhost:5173', 
+    'http://127.0.0.1:3000',
+    'http://127.0.0.1:5173',
+    /\.vercel\.app$/, // Allow all Vercel domains
+    /\.netlify\.app$/, // Allow Netlify domains if needed
+  ],
   credentials: true
 }));
 
@@ -30,7 +38,37 @@ app.use(bodyParser.json({ limit: '10mb' }));
 app.use(bodyParser.urlencoded({ extended: true, limit: '10mb' }));
 
 // Serve static files from uploads directory
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+const uploadPath = process.env.UPLOAD_PATH || 'uploads';
+app.use(`/${uploadPath}`, express.static(path.join(__dirname, uploadPath)));
+
+// Image info endpoint
+app.get('/api/image/:filename', (req, res) => {
+  const { filename } = req.params;
+  const imagePath = path.join(__dirname, 'uploads', filename);
+  
+  // Check if file exists
+  if (!fs.existsSync(imagePath)) {
+    return res.status(404).json({
+      success: false,
+      message: 'Image not found'
+    });
+  }
+  
+  // Get file stats
+  const stats = fs.statSync(imagePath);
+  const fileExtension = path.extname(filename).toLowerCase();
+  
+  res.json({
+    success: true,
+    data: {
+      filename,
+      size: stats.size,
+      created: stats.birthtime,
+      type: fileExtension,
+      url: `/uploads/${filename}`
+    }
+  });
+});
 
 // Routes
 app.use('/api/blogs', blogRoutes);
